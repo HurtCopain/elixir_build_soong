@@ -1083,12 +1083,20 @@ func pathForSource(ctx PathContext, pathComponents ...string) (SourcePath, error
 
 // pathForSourceRelaxed creates a SourcePath from pathComponents, but does not check that it exists.
 // It differs from pathForSource in that the path is allowed to exist outside of the PathContext.
-func pathForSourceRelaxed(ctx PathGlobContext, pathComponents ...string) (SourcePath, error) {
+func pathForSourceRelaxed(ctx PathContext, pathComponents ...string) (SourcePath, error) {
 	p := filepath.Join(pathComponents...)
 	ret := SourcePath{basePath{p, ""}}
 
-	if strings.HasPrefix(ret.String(), ctx.Config().soongOutDir) {
-		return ret, fmt.Errorf("source path %s is in output", ret.String())
+	abs, err := filepath.Abs(ret.String())
+	if err != nil {
+		return ret, err
+	}
+	buildroot, err := filepath.Abs(ctx.Config().soongOutDir)
+	if err != nil {
+		return ret, err
+	}
+	if strings.HasPrefix(abs, buildroot) {
+		return ret, fmt.Errorf("source path %s is in output", abs)
 	}
 
 	if pathtools.IsGlob(ret.String()) {
